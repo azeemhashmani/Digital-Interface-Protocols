@@ -1,0 +1,237 @@
+0. Overview
+==============
+Purpose: I²C is designed to allow multiple devices to communicate over a single set of data lines. 
+It's used for connecting low-speed peripherals to a microcontroller or microprocessor.
+Developed By: Philips (now NXP Semiconductors) in the early 1980s.
+
+In I²C communication, both master and slave devices can send and receive data, but the way data transmission is handled depends on the direction of 
+communication and the roles of the devices in the communication session.
+
+I2C is serial communication so after start condition master sends 7-bit address to target slave (1-bit) at a time and then 8-bit data that is acknowledged by receving device over SDA.
+On SCL master generates clock pulses to synchronize the transmission of the address and data on SDA line.
+
+
+1. Key Features
+=================
+Two-Wire Interface: I²C uses only two bidirectional lines for communication:
+
+SDA (Serial Data Line): Carries the data being transmitted.
+SCL (Serial Clock Line): Provides the clock signal to synchronize data transmission.
+
+Addressing: Each device on the I²C bus has a unique 7-bit or 10-bit address. The addressing scheme allows up to 127 devices on the bus (with 7-bit addressing) or up to 1023 devices (with 10-bit addressing).
+
+Multi-Master and Multi-Slave: I²C supports multiple master devices and multiple slave devices on the same bus. A master device controls the clock line and initiates communication, while slave devices respond to the master’s requests.
+
+Speed: I²C supports different speeds:
+
+Standard Mode: Up to 100 kHz.
+Fast Mode: Up to 400 kHz.
+Fast Mode Plus: Up to 1 MHz.
+High-Speed Mode: Up to 3.4 MHz (less common).
+
+2. Communication Protocol
+==========================
+Start Condition:
+-----------------
+Initiated by Master: The master device sends a start condition by pulling the SDA line low while the SCL line is high. 
+This signals the beginning of a communication session.
+
+Addressing:
+------------
+Slave Address: After the start condition, the master sends the 7-bit address of the target slave device, followed by a read/write bit. The slave device with the matching address acknowledges the master’s request.
+
+Data Transfer:
+--------------
+Data Bytes: 
+Data is transferred in bytes (8 bits) on the SDA line. Each byte is followed by an acknowledgment (ACK) bit from the receiving device.
+
+Clock Pulses: 
+The master generates clock pulses on the SCL line to synchronize the data transfer. The data on the SDA line is valid during the high phase of the clock and sampled during the low phase.
+
+Stop Condition:
+----------------
+Initiated by Master: The master sends a stop condition by pulling the SDA line high while the SCL line is high. This signals the end of the communication session..
+
+Electrical Characteristics
+---------------------------
+Pull-Up Resistors: 
+Both SDA and SCL lines require pull-up resistors to ensure they return to a high state when not actively driven low. 
+These resistors help in achieving proper signal levels and reliable communication.
+
+Voltage Levels: 
+The voltage levels for SDA and SCL are determined by the supply voltage of the devices on the I²C bus. 
+Common voltages are 3.3V or 5V.
+
+
+
+3. SDA and SCL Line
+====================
+SDA Line:
+---------
+Single Line: Carries 1 bit at a time.
+Bidirectional: Can both transmit and receive data.
+Data Format: Data is transmitted in 8-bit bytes, with each byte being acknowledged.
+
+SCL Line:
+----------
+Single Line: Provides clock pulses for data transmission.
+Unidirectional: Clock pulses are generated only by the master device.
+Clock Rate: The speed of communication is determined by the frequency of clock pulses.
+
+4. Protocol Operation
+=======================
+Protocol Operation
+--------------------
+Master Initiates Communication:
+The master generates a start condition.
+The master sends the address of the slave device, followed by the read/write bit.
+
+Slave Responds
+---------------
+The addressed slave device acknowledges by pulling the SDA line low.
+If the operation is a write, the master sends data bytes, and the slave acknowledges each byte.
+If the operation is a read, the master requests data bytes from the slave, and the slave sends the data followed by an acknowledgment.
+
+End of Communication
+-----------------------
+The master generates a stop condition to end the communication session.
+
+
+5. Communication Roles
+========================
+Master Device: Initiates communication and controls the clock line (SCL). 
+It is responsible for sending the start condition, generating clock pulses, 
+and sending the address of the target slave device. It also determines the direction of data transfer (read or write).
+
+Slave Device: Responds to the master’s requests. It receives the address from the master 
+and acknowledges the communication. It can either send data to the master (write operation) or receive 
+data from the master (read operation).
+
+
+6. Data Transfer Scenarios
+===========================
+Master-to-Slave Communication (Write Operation):
+-------------------------------------------------
+Start Condition: The master generates a start condition to initiate communication.
+
+Addressing: The master sends the address of the target slave device followed by a write bit.
+
+Data Transmission: The master sends data bytes to the slave. Each byte is followed by an 
+acknowledgment (ACK) bit from the slave to confirm receipt.
+
+Stop Condition: The master generates a stop condition to end the communication.
+In this scenario, the master sends data to the slave, and the slave acknowledges the received data.
+
+
+Slave-to-Master Communication (Read Operation):
+--------------------------------------------------
+Start Condition: The master generates a start condition to initiate communication.
+
+Addressing: The master sends the address of the target slave device followed by a read bit.
+
+Data Reception: The slave sends data bytes to the master. The master acknowledges each byte to 
+confirm receipt.
+
+Stop Condition: The master generates a stop condition to end the communication.
+
+
+7. I²C Slave Code (Arduino)
+============================
+The slave device will receive data from the master and respond to read requests. .
+For this example, we’ll set up a slave with address 0x08 and store a simple data value that the master can read.
+
+
+#include <Wire.h>
+
+#define SLAVE_ADDRESS 0x08  // Slave I2C address
+
+volatile byte data = 0;   // Data to send to the master
+
+void setup() {
+  Wire.begin(SLAVE_ADDRESS);  // Join I2C bus with slave address
+  Wire.onReceive(receiveEvent);  // Register receive event
+  Wire.onRequest(requestEvent);   // Register request event
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Main loop does nothing
+}
+
+void receiveEvent(int howMany) {
+  while (Wire.available()) {
+    data = Wire.read();  // Read byte from master
+    Serial.print("Received: ");
+    Serial.println(data);
+  }
+}
+
+void requestEvent() {
+  Wire.write(data);  // Send data to master
+  Serial.print("Sent: ");
+  Serial.println(data);
+}
+
+Wire.begin(SLAVE_ADDRESS); initializes the I²C communication as a slave with the specified address.
+Wire.onReceive(receiveEvent); sets up the receiveEvent function to handle incoming data from the master.
+Wire.onRequest(requestEvent); sets up the requestEvent function to handle requests from the master for data.
+receiveEvent(int howMany) reads incoming data from the master and stores it in the data variable.
+requestEvent() sends the stored data back to the master when requested.
+
+
+8. I²C Master Code (Arduino)
+=============================
+The master device will send data to the slave and request data from it. For this example, 
+the master will send a value 42 to the slave and then read the data from the slave.
+
+#include <Wire.h>
+
+#define SLAVE_ADDRESS 0x08  // Address of the slave
+
+void setup() {
+  Wire.begin();          // Join I2C bus as master
+  Serial.begin(9600);
+  delay(1000);
+}
+
+void loop() {
+  Wire.beginTransmission(SLAVE_ADDRESS); // Start communication with slave
+  Wire.write(42);  // Send a byte of data to the slave
+  Wire.endTransmission();  // End communication
+  
+  delay(500);  // Wait for slave to process
+
+  Wire.requestFrom(SLAVE_ADDRESS, 1);  // Request 1 byte from slave
+  
+  if (Wire.available()) {
+    byte received = Wire.read();  // Read the byte
+    Serial.print("Received: ");
+    Serial.println(received);
+  }
+
+  delay(2000);  // Wait before sending the next request
+}
+
+
+Wire.begin(); initializes the I²C communication as a master.
+Wire.beginTransmission(SLAVE_ADDRESS); starts communication with the slave.
+Wire.write(42); sends the byte 42 to the slave.
+Wire.endTransmission(); ends the communication.
+Wire.requestFrom(SLAVE_ADDRESS, 1); requests 1 byte of data from the slave.
+Wire.read(); reads the byte of data sent by the slave
+
+
+9. Baud Rate of 9600
+=====================
+Bits Per Second:
+------------------
+9600 Baud: This rate indicates that 9600 bits of data are transmitted each second
+
+Data Transfer:
+---------------
+Data Units: Each bit is transmitted serially, so if you are transmitting 8-bit bytes (which is common), 
+you will be able to send 9600 bits / 8 bits per byte = 1200 bytes per second.
+
+Implication: 
+Higher baud rates allow for faster data transmission but may require better signal integrity and more precise timing.
+
